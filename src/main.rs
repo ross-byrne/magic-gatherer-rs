@@ -9,9 +9,12 @@ fn main() {
     println!("{}", SCRYFALL_API_URL);
 
     create_data_dirs();
+    fetch_card_data();
 }
 
 fn create_data_dirs() {
+    println!("Creating data directories...");
+
     match fs::create_dir_all(&DATA_DIR) {
         Ok(_) => {}
         Err(e) => panic!("{}", e),
@@ -21,4 +24,23 @@ fn create_data_dirs() {
         Ok(_) => {}
         Err(e) => panic!("{}", e),
     }
+}
+
+fn fetch_card_data() {
+    println!("Querying Scryfall bulk api...");
+
+    let response_result = minreq::get(SCRYFALL_API_URL).send();
+    let response = match response_result {
+        Ok(x) => x,
+        Err(e) => panic!("{}", e),
+    };
+
+    println!("{} - {}", response.status_code, response.reason_phrase);
+
+    let resp_str = match response.as_str() {
+        Ok(x) => x,
+        Err(e) => panic!("{}", e),
+    };
+
+    println!("{}", resp_str);
 }
