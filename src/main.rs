@@ -1,17 +1,24 @@
-use std::env;
+use std::fs;
 
 const SCRYFALL_API_URL: &'static str = "https://api.scryfall.com/bulk-data";
-// const DATA_DIR: &'static str = "/data";
-// const CARD_DIR: &'static str = "/data/magic-the-gathering-cards";
+const DATA_DIR: &'static str = "data";
+const CARD_DIR: &'static str = "data/magic-the-gathering-cards";
 
 fn main() {
     println!("Hello, world!");
     println!("{}", SCRYFALL_API_URL);
 
-    let current_dir = match env::current_dir() {
-        Ok(path) => path,
-        Err(_e) => panic!("Error reading current path"),
-    };
+    create_data_dirs();
+}
 
-    println!("The current directory is {}", current_dir.display());
+fn create_data_dirs() {
+    match fs::create_dir_all(&DATA_DIR) {
+        Ok(_) => {}
+        Err(e) => panic!("{}", e),
+    }
+
+    match fs::create_dir_all(&CARD_DIR) {
+        Ok(_) => {}
+        Err(e) => panic!("{}", e),
+    }
 }
