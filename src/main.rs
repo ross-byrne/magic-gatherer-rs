@@ -1,68 +1,51 @@
+use minreq;
 use serde_json::Value;
+use std::error::Error;
 use std::fs;
+use std::io;
 
 const SCRYFALL_API_URL: &'static str = "https://api.scryfall.com/bulk-data";
 const DATA_DIR: &'static str = "data";
 const CARD_DIR: &'static str = "data/magic-the-gathering-cards";
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     println!("Hello, world!");
     println!("{}", SCRYFALL_API_URL);
 
-    create_data_dirs();
-    fetch_card_data();
+    create_data_dirs()?;
+    fetch_card_data()?;
+
+    Ok(())
 }
 
-fn create_data_dirs() {
+fn create_data_dirs() -> Result<(), io::Error> {
     println!("Creating data directories...");
 
-    match fs::create_dir_all(&DATA_DIR) {
-        Ok(_) => {}
-        Err(e) => panic!("{}", e),
-    }
+    fs::create_dir_all(&DATA_DIR)?;
+    fs::create_dir_all(&CARD_DIR)?;
 
-    match fs::create_dir_all(&CARD_DIR) {
-        Ok(_) => {}
-        Err(e) => panic!("{}", e),
-    }
+    Ok(())
 }
 
-fn fetch_card_data() {
+fn fetch_card_data() -> Result<(), Box<dyn Error>> {
     println!("Querying Scryfall bulk api...");
 
-    let response_result = minreq::get(SCRYFALL_API_URL).send();
-    let response = match response_result {
-        Ok(x) => x,
-        Err(e) => panic!("{}", e),
-    };
+    let response = minreq::get(SCRYFALL_API_URL).send()?;
+    let resp_str = response.as_str()?;
 
-    println!("{} - {}", response.status_code, response.reason_phrase);
+    let bulk_data_json: Value = serde_json::from_str(resp_str)?;
+    let data: &Value = &bulk_data_json["data"];
 
-    let resp_str = match response.as_str() {
-        Ok(x) => x,
-        Err(e) => panic!("{}", e),
-    };
+    let default_cards_data: Option<Value> = data
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|&x| x["type"] == "default_cards")
+        .cloned();
 
-    let bulk_data_json: Value = match serde_json::from_str(resp_str) {
-        Ok(x) => x,
-        Err(e) => panic!("{}", e),
-    };
-
-    let data = &bulk_data_json["data"];
-    let mut selected_obj: Option<Value> = None;
-
-    for x in data.as_array().unwrap() {
-        // println!("========================================================");
-        // println!("{}", x["type"]);
-
-        if x["type"] == "default_cards" {
-            selected_obj = Some(x.clone());
-            break;
-        }
-    }
-
-    if let Some(x) = selected_obj {
+    if let Some(x) = default_cards_data {
         println!("{}", x);
+        Ok(())
     } else {
         panic!("Failed to read API data");
     }
