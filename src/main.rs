@@ -13,9 +13,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("{}", SCRYFALL_API_URL);
 
     create_data_dirs()?;
-    let card_data_json: Value = fetch_card_data()?;
+    let download_uri: String = fetch_card_data()?;
 
-    download_card_uris(card_data_json);
+    download_card_json(download_uri)?;
 
     Ok(())
 }
@@ -29,16 +29,13 @@ fn create_data_dirs() -> Result<(), io::Error> {
     Ok(())
 }
 
-fn fetch_card_data() -> Result<Value, Box<dyn Error>> {
+fn fetch_card_data() -> Result<String, Box<dyn Error>> {
     println!("Querying Scryfall bulk api...");
 
     let response = minreq::get(SCRYFALL_API_URL).send()?;
-    let resp_str = response.as_str()?;
+    let bulk_data_json: Value = response.json()?;
 
-    let bulk_data_json: Value = serde_json::from_str(resp_str)?;
-    let data: &Value = &bulk_data_json["data"];
-
-    let default_cards_data: Option<Value> = data
+    let default_cards_data: Option<Value> = bulk_data_json["data"]
         .as_array()
         .unwrap()
         .iter()
@@ -46,12 +43,26 @@ fn fetch_card_data() -> Result<Value, Box<dyn Error>> {
         .cloned();
 
     if let Some(data) = default_cards_data {
-        Ok(data)
+        let download_uri = data["download_uri"].to_string();
+
+        println!("{}", download_uri);
+
+        Ok(download_uri)
     } else {
         panic!("Failed to read API data");
     }
 }
 
-fn download_card_uris(data: Value) {
-    println!("{}", data);
+fn download_card_json(_url: String) -> Result<(), Box<dyn Error>> {
+    println!("Downloading card json...");
+
+    // This fails becuase the response is a file download.
+    // Need to look at other options.
+
+    // let response = minreq::get(url).send()?;
+    // let resp_json: Value = response.json()?;
+
+    // println!("{}", resp_json);
+
+    Ok(())
 }
