@@ -13,7 +13,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("{}", SCRYFALL_API_URL);
 
     create_data_dirs()?;
-    fetch_card_data()?;
+    let card_data_json: Value = fetch_card_data()?;
+
+    download_card_uris(card_data_json);
 
     Ok(())
 }
@@ -27,7 +29,7 @@ fn create_data_dirs() -> Result<(), io::Error> {
     Ok(())
 }
 
-fn fetch_card_data() -> Result<(), Box<dyn Error>> {
+fn fetch_card_data() -> Result<Value, Box<dyn Error>> {
     println!("Querying Scryfall bulk api...");
 
     let response = minreq::get(SCRYFALL_API_URL).send()?;
@@ -43,10 +45,13 @@ fn fetch_card_data() -> Result<(), Box<dyn Error>> {
         .find(|&x| x["type"] == "default_cards")
         .cloned();
 
-    if let Some(x) = default_cards_data {
-        println!("{}", x);
-        Ok(())
+    if let Some(data) = default_cards_data {
+        Ok(data)
     } else {
         panic!("Failed to read API data");
     }
+}
+
+fn download_card_uris(data: Value) {
+    println!("{}", data);
 }
