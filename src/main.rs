@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     create_data_dirs()?;
     let download_uri: String = fetch_card_data()?;
 
-    download_card_json(download_uri)?;
+    download_card_json(&download_uri)?;
 
     Ok(())
 }
@@ -53,13 +53,21 @@ fn fetch_card_data() -> Result<String, Box<dyn Error>> {
     }
 }
 
-fn download_card_json(_url: String) -> Result<(), Box<dyn Error>> {
+fn remove_first_and_last(value: &str) -> &str {
+    let mut chars = value.chars();
+    chars.next();
+    chars.next_back();
+
+    chars.as_str()
+}
+
+fn download_card_json(url: &String) -> Result<(), Box<dyn Error>> {
     println!("Downloading card json...");
 
-    // This fails becuase the response is a file download.
-    // Need to look at other options.
+    // remove "" from json string
+    let _processed_url = remove_first_and_last(&url);
 
-    // let response = minreq::get(url).send()?;
+    // let response = minreq::get(processed_url).send()?;
     // let resp_json: Value = response.json()?;
 
     // println!("{}", resp_json);
