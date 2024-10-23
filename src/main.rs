@@ -1,3 +1,5 @@
+mod types;
+
 use minreq;
 use serde_json::Value;
 use std::error::Error;
