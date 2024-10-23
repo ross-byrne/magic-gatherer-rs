@@ -30,8 +30,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 // Recursively create required data directories
 fn create_data_dirs() {
     println!("Creating data directories...");
-
-    fs::create_dir_all(&CARD_DIR).expect("Creating data directory should be created");
+    fs::create_dir_all(&CARD_DIR).expect("Data directories should be created");
 }
 
 async fn fetch_bulk_data(client: &reqwest::Client) -> Result<(), Box<dyn Error>> {
