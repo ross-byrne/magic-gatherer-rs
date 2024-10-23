@@ -17,7 +17,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::new();
 
     create_data_dirs();
-    fetch_bulk_data(&client).await?;
+    let _bulk_data = fetch_bulk_data(&client).await?;
 
     // TODO: clean up
     // let _download_uri: String = fetch_card_data()?;
@@ -33,7 +33,7 @@ fn create_data_dirs() {
     fs::create_dir_all(&CARD_DIR).expect("Data directories should be created");
 }
 
-async fn fetch_bulk_data(client: &reqwest::Client) -> Result<(), Box<dyn Error>> {
+async fn fetch_bulk_data(client: &reqwest::Client) -> Result<BulkData, Box<dyn Error>> {
     println!("Fetching bulk data from Scryfall API...");
 
     let bulk_data: BulkData = client
@@ -48,7 +48,7 @@ async fn fetch_bulk_data(client: &reqwest::Client) -> Result<(), Box<dyn Error>>
     let pretty = to_string_pretty(&bulk_data)?;
     println!("{}", pretty);
 
-    Ok(())
+    return Ok(bulk_data);
 }
 
 fn get_request_headers() -> HeaderMap {
