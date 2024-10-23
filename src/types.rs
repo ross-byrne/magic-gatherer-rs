@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BulkData {
     object: String,
-    has_more: String,
+    has_more: bool,
     data: Vec<BulkDataItem>,
 }
 
