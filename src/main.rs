@@ -9,13 +9,12 @@ const DATA_DIR: &'static str = "data";
 const CARD_DIR: &'static str = "data/magic-the-gathering-cards";
 
 fn main() -> Result<(), Box<dyn Error>> {
-    println!("Hello, world!");
     println!("{}", SCRYFALL_API_URL);
 
     create_data_dirs()?;
-    let download_uri: String = fetch_card_data()?;
+    let _download_uri: String = fetch_card_data()?;
 
-    download_card_json(&download_uri)?;
+    // download_card_json(&download_uri)?;
 
     Ok(())
 }
