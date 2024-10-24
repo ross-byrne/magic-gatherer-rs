@@ -2,13 +2,17 @@ mod types;
 
 use reqwest;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT};
-// use serde_json::to_string_pretty;
+use serde_json::to_string_pretty;
 use std::error::Error;
 use std::fs;
-use types::{BulkData, BulkDataItem};
+use std::path::Path;
+use tokio::io::AsyncWriteExt;
+use types::{BulkData, BulkDataItem, Card};
 
 const SCRYFALL_API_URL: &'static str = "https://api.scryfall.com/bulk-data";
+const DATA_DIR: &'static str = "data";
 const CARD_DIR: &'static str = "data/magic-the-gathering-cards";
+const BULK_DATA_FILE: &'static str = "bulk-data.json";
 
 const UNIQUE_ARTWORK_KEY: &'static str = "unique_artwork";
 const DEFAULT_CARDS_KEY: &'static str = "default_cards";
@@ -31,7 +35,7 @@ impl BulkItemType {
             .data
             .iter()
             .find(|x| x.item_type == self.get_key())
-            .unwrap();
+            .expect("Should find bulk item by type");
     }
 }
 
@@ -45,12 +49,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // get unique artwork object
     let unique_artwork: &BulkDataItem = BulkItemType::UniqueArtwork.get_item(&bulk_data);
-
     println!("{:#?}", unique_artwork);
 
-    // TODO: clean up
-    // let _download_uri: String = fetch_card_data()?;
-    // download_card_json(&download_uri)?;
+    // start downloading card json file
+    download_card_json(&client, &unique_artwork.download_uri).await?;
 
     println!("\nFinished! :)\n");
     Ok(())
@@ -90,48 +92,32 @@ fn get_request_headers() -> HeaderMap {
     return headers;
 }
 
-// fn fetch_card_data() -> Result<String, Box<dyn Error>> {
-//     println!("Querying Scryfall bulk api...");
+async fn download_card_json(
+    client: &reqwest::Client,
+    download_uri: &str,
+) -> Result<(), Box<dyn Error>> {
+    println!("Downloading card json...");
 
-//     let response = minreq::get(SCRYFALL_API_URL).send()?;
-//     let bulk_data_json: Value = response.json()?;
+    // get response
+    let mut response = client
+        .get(download_uri)
+        .headers(get_request_headers())
+        .send()
+        .await?;
 
-//     let default_cards_data: Option<Value> = bulk_data_json["data"]
-//         .as_array()
-//         .unwrap()
-//         .iter()
-//         .find(|&x| x["type"] == "default_cards")
-//         .cloned();
+    // define file path. TODO: add card set type to file name?
+    let mut file_path = Path::new(DATA_DIR).to_path_buf();
+    file_path.push(BULK_DATA_FILE);
 
-//     if let Some(data) = default_cards_data {
-//         let download_uri = data["download_uri"].to_string();
+    // write chunks to file as it downloads
+    let mut file = tokio::fs::File::create(file_path).await?;
+    while let Some(chunk) = response.chunk().await? {
+        file.write_all(&chunk).await?;
+    }
 
-//         println!("{}", download_uri);
+    // pretty print response for testing
+    // let pretty = to_string_pretty(&card_json).unwrap();
+    // println!("{}", pretty);
 
-//         Ok(download_uri)
-//     } else {
-//         panic!("Failed to read API data");
-//     }
-// }
-
-// fn remove_first_and_last(value: &str) -> &str {
-//     let mut chars = value.chars();
-//     chars.next();
-//     chars.next_back();
-
-//     chars.as_str()
-// }
-
-// fn download_card_json(url: &String) -> Result<(), Box<dyn Error>> {
-//     println!("Downloading card json...");
-
-//     // remove "" from json string
-//     let _processed_url = remove_first_and_last(&url);
-
-//     // let response = minreq::get(processed_url).send()?;
-//     // let resp_json: Value = response.json()?;
-
-//     // println!("{}", resp_json);
-
-//     Ok(())
-// }
+    return Ok(());
+}
