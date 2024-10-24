@@ -5,47 +5,48 @@ use serde::{Deserialize, Serialize};
 /// Bulk Data api: https://scryfall.com/docs/api/bulk-data
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BulkData {
-    object: String,
-    has_more: bool,
-    data: Vec<BulkDataItem>,
+    pub object: String,
+    pub has_more: bool,
+    pub data: Vec<BulkDataItem>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BulkDataItem {
-    object: String,
-    id: String,
+    pub object: String,
+    pub id: String,
     #[serde(rename = "type")]
-    item_type: String,
-    updated_at: String,
-    uri: String,
-    download_uri: String,
-    name: String,
-    description: String,
+    pub item_type: String,
+    pub updated_at: String,
+    pub uri: String,
+    pub download_uri: String,
+    pub size: u32,
+    pub name: String,
+    pub description: String,
 }
 
 /// card api: https://scryfall.com/docs/api/cards/id
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CardImageUri {
-    small: String,
-    normal: String,
-    large: String,
-    png: String,
-    art_crop: String,
-    border_crop: String,
+    pub small: String,
+    pub normal: String,
+    pub large: String,
+    pub png: String,
+    pub art_crop: String,
+    pub border_crop: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Card {
-    object: String,
-    id: String,
-    oracle_id: String,
-    name: String,
-    lang: String,
-    released_at: String,
-    uri: String,
-    scryfall_uri: String,
-    layout: String,
-    highres_image: bool,
-    image_status: String,
-    image_uris: CardImageUri,
+    pub object: String,
+    pub id: String,
+    pub oracle_id: String,
+    pub name: String,
+    pub lang: String,
+    pub released_at: String,
+    pub uri: String,
+    pub scryfall_uri: String,
+    pub layout: String,
+    pub highres_image: bool,
+    pub image_status: String,
+    pub image_uris: CardImageUri,
 }
