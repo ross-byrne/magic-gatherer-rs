@@ -1,43 +1,19 @@
 mod types;
 
+use futures_util::StreamExt;
 use reqwest;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT};
-use serde_json::to_string_pretty;
+// use serde_json::to_string_pretty;
 use std::error::Error;
 use std::fs;
 use std::path::Path;
 use tokio::io::AsyncWriteExt;
-use types::{BulkData, BulkDataItem, Card};
+use types::{BulkData, BulkDataItem, BulkItemType};
 
 const SCRYFALL_API_URL: &'static str = "https://api.scryfall.com/bulk-data";
 const DATA_DIR: &'static str = "data";
 const CARD_DIR: &'static str = "data/magic-the-gathering-cards";
 const BULK_DATA_FILE: &'static str = "bulk-data.json";
-
-const UNIQUE_ARTWORK_KEY: &'static str = "unique_artwork";
-const DEFAULT_CARDS_KEY: &'static str = "default_cards";
-
-enum BulkItemType {
-    UniqueArtwork,
-    DefaultCards,
-}
-
-impl BulkItemType {
-    pub fn get_key(&self) -> &'static str {
-        return match self {
-            Self::UniqueArtwork => UNIQUE_ARTWORK_KEY,
-            Self::DefaultCards => DEFAULT_CARDS_KEY,
-        };
-    }
-
-    pub fn get_item<'a>(&self, bulk_data: &'a BulkData) -> &'a BulkDataItem {
-        return bulk_data
-            .data
-            .iter()
-            .find(|x| x.item_type == self.get_key())
-            .expect("Should find bulk item by type");
-    }
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -49,12 +25,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // get unique artwork object
     let unique_artwork: &BulkDataItem = BulkItemType::UniqueArtwork.get_item(&bulk_data);
-    println!("{:#?}", unique_artwork);
+    // println!("{:#?}", unique_artwork);
 
     // start downloading card json file
     download_card_json(&client, &unique_artwork.download_uri).await?;
 
-    println!("\nFinished! :)\n");
+    // parse downloaded file for card IDs and download URIs
+    parse_card_json_file()?;
+
+    println!("\nFinished!\n");
     Ok(())
 }
 
@@ -77,7 +56,7 @@ async fn fetch_bulk_data(client: &reqwest::Client) -> Result<BulkData, Box<dyn E
 
     // pretty print response for testing
     // let pretty = to_string_pretty(&bulk_data)?;
-    println!("{:#?}", bulk_data);
+    // println!("{:#?}", bulk_data);
 
     return Ok(bulk_data);
 }
@@ -98,26 +77,36 @@ async fn download_card_json(
 ) -> Result<(), Box<dyn Error>> {
     println!("Downloading card json...");
 
-    // get response
-    let mut response = client
-        .get(download_uri)
-        .headers(get_request_headers())
-        .send()
-        .await?;
-
-    // define file path. TODO: add card set type to file name?
+    // define file path
     let mut file_path = Path::new(DATA_DIR).to_path_buf();
     file_path.push(BULK_DATA_FILE);
 
-    // write chunks to file as it downloads
-    let mut file = tokio::fs::File::create(file_path).await?;
-    while let Some(chunk) = response.chunk().await? {
-        file.write_all(&chunk).await?;
+    // check if file exists and skip download if yes
+    // TODO: check expected file size from BulkDataItem. Remove file and download again if it doesn't match
+    if fs::exists(&file_path)? {
+        println!("File already downloaded.");
+        return Ok(());
     }
 
-    // pretty print response for testing
-    // let pretty = to_string_pretty(&card_json).unwrap();
-    // println!("{}", pretty);
+    // stream response
+    let mut stream = client
+        .get(download_uri)
+        .headers(get_request_headers())
+        .send()
+        .await?
+        .bytes_stream();
+
+    // write chunks to file as it downloads
+    let mut file = tokio::fs::File::create(file_path).await?;
+    while let Some(chunk) = stream.next().await {
+        file.write_all(&chunk?).await?;
+    }
+
+    return Ok(());
+}
+
+fn parse_card_json_file() -> Result<(), Box<dyn Error>> {
+    println!("Parsing downloaded json file...");
 
     return Ok(());
 }

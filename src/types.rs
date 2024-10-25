@@ -2,6 +2,9 @@ use serde::{Deserialize, Serialize};
 
 /// Using Scryfall API to get magic cards. See documentation here: https://scryfall.com/docs/api
 
+const UNIQUE_ARTWORK_KEY: &'static str = "unique_artwork";
+const DEFAULT_CARDS_KEY: &'static str = "default_cards";
+
 /// Bulk Data api: https://scryfall.com/docs/api/bulk-data
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BulkData {
@@ -49,4 +52,26 @@ pub struct Card {
     pub highres_image: bool,
     pub image_status: String,
     pub image_uris: CardImageUri,
+}
+
+pub enum BulkItemType {
+    UniqueArtwork,
+    _DefaultCards,
+}
+
+impl BulkItemType {
+    pub fn get_key(&self) -> &'static str {
+        return match self {
+            Self::UniqueArtwork => UNIQUE_ARTWORK_KEY,
+            Self::_DefaultCards => DEFAULT_CARDS_KEY,
+        };
+    }
+
+    pub fn get_item<'a>(&self, bulk_data: &'a BulkData) -> &'a BulkDataItem {
+        return bulk_data
+            .data
+            .iter()
+            .find(|x| x.item_type == self.get_key())
+            .expect("Should find bulk item by type");
+    }
 }
