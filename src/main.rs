@@ -75,8 +75,6 @@ async fn download_card_json(
     client: &reqwest::Client,
     download_uri: &str,
 ) -> Result<(), Box<dyn Error>> {
-    println!("Downloading card json...");
-
     // define file path
     let mut file_path = Path::new(DATA_DIR).to_path_buf();
     file_path.push(BULK_DATA_FILE);
@@ -87,6 +85,8 @@ async fn download_card_json(
         println!("File already downloaded.");
         return Ok(());
     }
+
+    println!("Downloading card json...");
 
     // stream response
     let mut stream = client
