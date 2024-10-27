@@ -123,5 +123,11 @@ fn parse_card_json_file() -> Result<Vec<Card>, Box<dyn Error>> {
     // Read the JSON contents of the file as an instance of `User`.
     let cards: Vec<Card> = serde_json::from_reader(reader)?;
 
+    // Filter out entries missing image uris
+    let cards: Vec<Card> = cards
+        .into_iter()
+        .filter(|x| x.image_uris.is_some())
+        .collect();
+
     return Ok(cards);
 }
