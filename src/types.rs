@@ -30,28 +30,31 @@ pub struct BulkDataItem {
 /// card api: https://scryfall.com/docs/api/cards/id
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CardImageUri {
-    pub small: String,
+    // pub small: String,
     pub normal: String,
-    pub large: String,
-    pub png: String,
-    pub art_crop: String,
-    pub border_crop: String,
+    // pub large: String,
+    // pub png: String,
+    // pub art_crop: String,
+    // pub border_crop: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Card {
-    pub object: String,
     pub id: String,
-    pub oracle_id: String,
     pub name: String,
-    pub lang: String,
-    pub released_at: String,
-    pub uri: String,
-    pub scryfall_uri: String,
-    pub layout: String,
-    pub highres_image: bool,
-    pub image_status: String,
-    pub image_uris: CardImageUri,
+    pub image_uris: Option<CardImageUri>,
+    //
+    // Other field we aren't using
+    //
+    // pub object: String,
+    // pub oracle_id: String,
+    // pub lang: String,
+    // pub released_at: String,
+    // pub uri: String,
+    // pub scryfall_uri: String,
+    // pub layout: String,
+    // pub highres_image: bool,
+    // pub image_status: String,
 }
 
 pub enum BulkItemType {

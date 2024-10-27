@@ -4,11 +4,14 @@ use futures_util::StreamExt;
 use reqwest;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT};
 // use serde_json::to_string_pretty;
+use serde_json;
 use std::error::Error;
 use std::fs;
+use std::fs::File;
+use std::io::BufReader;
 use std::path::Path;
 use tokio::io::AsyncWriteExt;
-use types::{BulkData, BulkDataItem, BulkItemType};
+use types::{BulkData, BulkDataItem, BulkItemType, Card};
 
 const SCRYFALL_API_URL: &'static str = "https://api.scryfall.com/bulk-data";
 const DATA_DIR: &'static str = "data";
@@ -31,7 +34,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     download_card_json(&client, &unique_artwork.download_uri).await?;
 
     // parse downloaded file for card IDs and download URIs
-    parse_card_json_file()?;
+    let cards = parse_card_json_file()?;
+
+    println!("number of parsed cards: {}", cards.len());
+    println!("First card: {:#?}", cards[0]);
 
     println!("\nFinished!\n");
     Ok(())
@@ -105,8 +111,17 @@ async fn download_card_json(
     return Ok(());
 }
 
-fn parse_card_json_file() -> Result<(), Box<dyn Error>> {
+fn parse_card_json_file() -> Result<Vec<Card>, Box<dyn Error>> {
     println!("Parsing downloaded json file...");
+    let mut path = Path::new(DATA_DIR).to_path_buf();
+    path.push(BULK_DATA_FILE);
 
-    return Ok(());
+    // Open the file in read-only mode with buffer.
+    let file = File::open(path).expect("File should be opened as read only");
+    let reader = BufReader::new(file);
+
+    // Read the JSON contents of the file as an instance of `User`.
+    let cards: Vec<Card> = serde_json::from_reader(reader)?;
+
+    return Ok(cards);
 }
