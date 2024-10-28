@@ -8,36 +8,47 @@ use serde_json;
 use std::error::Error;
 use std::fs;
 use std::fs::File;
+use std::io::prelude::*;
 use std::io::BufReader;
-use std::path::Path;
 use tokio::io::AsyncWriteExt;
 use types::{BulkData, BulkDataItem, BulkItemType, Card};
 
 const SCRYFALL_API_URL: &'static str = "https://api.scryfall.com/bulk-data";
 const DATA_DIR: &'static str = "data";
 const CARD_DIR: &'static str = "data/magic-the-gathering-cards";
-const BULK_DATA_FILE: &'static str = "bulk-data.json";
+const BULK_DATA_FILE: &'static str = "data/bulk-data.json";
+const PROCESSED_CARD_DATA_FILE: &'static str = "data/processed-card-data.json";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     println!("Welcome to magic-gatherer-rs!");
     let client = reqwest::Client::new();
 
+    // setup data directory
     create_data_dirs();
-    let bulk_data = fetch_bulk_data(&client).await?;
 
-    // get unique artwork object
-    let unique_artwork: &BulkDataItem = BulkItemType::UniqueArtwork.get_item(&bulk_data);
-    // println!("{:#?}", unique_artwork);
+    // if processed card data doesn't exist yet
+    if !fs::exists(PROCESSED_CARD_DATA_FILE)? {
+        // fetch bulk data
+        let bulk_data = fetch_bulk_data(&client).await?;
 
-    // start downloading card json file
-    download_card_json(&client, &unique_artwork.download_uri).await?;
+        // get unique artwork object
+        let unique_artwork: &BulkDataItem = BulkItemType::UniqueArtwork.get_item(&bulk_data);
+        // println!("{:#?}", unique_artwork);
 
-    // parse downloaded file for card IDs and download URIs
-    let cards = parse_card_json_file()?;
+        // start downloading card json file
+        download_card_json(&client, &unique_artwork.download_uri).await?;
 
-    println!("number of parsed cards: {}", cards.len());
-    println!("First card: {:#?}", cards[0]);
+        // parse downloaded file for card IDs and download URIs
+        let cards = parse_card_json_file()?;
+        println!("number of parsed cards: {}", cards.len());
+        // println!("First card: {:#?}", cards[0]);
+
+        // save processed card data to a file
+        save_processed_json_to_file(&cards)?;
+    } else {
+        println!("Processed card data already exists...");
+    }
 
     println!("\nFinished!\n");
     Ok(())
@@ -46,7 +57,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 // Recursively create required data directories
 fn create_data_dirs() {
     println!("Creating data directories...");
-    fs::create_dir_all(&CARD_DIR).expect("Data directories should be created");
+    fs::create_dir_all(&DATA_DIR).expect("Data directory should be created");
+    fs::create_dir_all(&CARD_DIR).expect("Card directory should be created");
 }
 
 async fn fetch_bulk_data(client: &reqwest::Client) -> Result<BulkData, Box<dyn Error>> {
@@ -81,13 +93,9 @@ async fn download_card_json(
     client: &reqwest::Client,
     download_uri: &str,
 ) -> Result<(), Box<dyn Error>> {
-    // define file path
-    let mut file_path = Path::new(DATA_DIR).to_path_buf();
-    file_path.push(BULK_DATA_FILE);
-
     // check if file exists and skip download if yes
     // TODO: check expected file size from BulkDataItem. Remove file and download again if it doesn't match
-    if fs::exists(&file_path)? {
+    if fs::exists(BULK_DATA_FILE)? {
         println!("File already downloaded.");
         return Ok(());
     }
@@ -103,7 +111,7 @@ async fn download_card_json(
         .bytes_stream();
 
     // write chunks to file as it downloads
-    let mut file = tokio::fs::File::create(file_path).await?;
+    let mut file = tokio::fs::File::create(BULK_DATA_FILE).await?;
     while let Some(chunk) = stream.next().await {
         file.write_all(&chunk?).await?;
     }
@@ -113,11 +121,9 @@ async fn download_card_json(
 
 fn parse_card_json_file() -> Result<Vec<Card>, Box<dyn Error>> {
     println!("Parsing downloaded json file...");
-    let mut path = Path::new(DATA_DIR).to_path_buf();
-    path.push(BULK_DATA_FILE);
 
     // Open the file in read-only mode with buffer.
-    let file = File::open(path).expect("File should be opened as read only");
+    let file = File::open(BULK_DATA_FILE).expect("File should be opened as read only");
     let reader = BufReader::new(file);
 
     // Read the JSON contents of the file as an instance of `User`.
@@ -130,4 +136,20 @@ fn parse_card_json_file() -> Result<Vec<Card>, Box<dyn Error>> {
         .collect();
 
     return Ok(cards);
+}
+
+fn save_processed_json_to_file(data: &Vec<Card>) -> Result<(), Box<dyn Error>> {
+    if fs::exists(PROCESSED_CARD_DATA_FILE)? {
+        println!("Processed file already created...");
+        return Ok(());
+    }
+
+    // create file to save processed card data
+    let mut output = File::create(PROCESSED_CARD_DATA_FILE)?;
+
+    // serialse structs as json and write it to the file
+    let json = serde_json::to_string(&data).expect("Struct should be serialised");
+    output.write_all(json.as_bytes())?;
+
+    Ok(())
 }
