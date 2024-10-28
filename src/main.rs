@@ -1,3 +1,5 @@
+pub type Result<T> = core::result::Result<T, Box<dyn Error>>;
+
 mod types;
 
 use futures_util::StreamExt;
@@ -20,7 +22,7 @@ const BULK_DATA_FILE: &'static str = "data/bulk-data.json";
 const PROCESSED_CARD_DATA_FILE: &'static str = "data/processed-card-data.json";
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     println!("Welcome to magic-gatherer-rs!");
     let client = reqwest::Client::new();
 
@@ -61,7 +63,7 @@ fn create_data_dirs() {
     fs::create_dir_all(&CARD_DIR).expect("Card directory should be created");
 }
 
-async fn fetch_bulk_data(client: &reqwest::Client) -> Result<BulkData, Box<dyn Error>> {
+async fn fetch_bulk_data(client: &reqwest::Client) -> Result<BulkData> {
     println!("Fetching bulk data from Scryfall API...");
 
     let bulk_data: BulkData = client
@@ -89,10 +91,7 @@ fn get_request_headers() -> HeaderMap {
     return headers;
 }
 
-async fn download_card_json(
-    client: &reqwest::Client,
-    download_uri: &str,
-) -> Result<(), Box<dyn Error>> {
+async fn download_card_json(client: &reqwest::Client, download_uri: &str) -> Result<()> {
     // check if file exists and skip download if yes
     // TODO: check expected file size from BulkDataItem. Remove file and download again if it doesn't match
     if fs::exists(BULK_DATA_FILE)? {
@@ -119,7 +118,7 @@ async fn download_card_json(
     return Ok(());
 }
 
-fn parse_card_json_file() -> Result<Vec<Card>, Box<dyn Error>> {
+fn parse_card_json_file() -> Result<Vec<Card>> {
     println!("Parsing downloaded json file...");
 
     // Open the file in read-only mode with buffer.
@@ -138,7 +137,7 @@ fn parse_card_json_file() -> Result<Vec<Card>, Box<dyn Error>> {
     return Ok(cards);
 }
 
-fn save_processed_json_to_file(data: &Vec<Card>) -> Result<(), Box<dyn Error>> {
+fn save_processed_json_to_file(data: &Vec<Card>) -> Result<()> {
     if fs::exists(PROCESSED_CARD_DATA_FILE)? {
         println!("Processed file already created...");
         return Ok(());
