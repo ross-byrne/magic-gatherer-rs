@@ -59,7 +59,7 @@ async fn main() -> Result<()> {
     // println!("First card: {:#?}", cards[0]);
 
     // start downloading images
-    download_card_images(cards).await?;
+    download_card_images(&client, cards).await?;
 
     println!("\nFinished!\n");
     Ok(())
@@ -228,10 +228,9 @@ async fn download_card_image(
     return Ok(());
 }
 
-async fn download_card_images(cards: Vec<Card>) -> Result<()> {
+async fn download_card_images(client: &reqwest::Client, cards: Vec<Card>) -> Result<()> {
     println!("\nStarting image download...\n");
 
-    let client = reqwest::Client::new();
     let mut iter = cards.iter();
     let mut count: usize = 0;
     let total = cards.len();
