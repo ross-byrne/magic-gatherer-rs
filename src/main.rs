@@ -29,6 +29,8 @@ async fn main() -> Result<()> {
     // setup data directory
     create_data_dirs();
 
+    let cards: Vec<Card>;
+
     // if processed card data doesn't exist yet
     if !fs::exists(PROCESSED_CARD_DATA_FILE)? {
         // fetch bulk data
@@ -42,15 +44,19 @@ async fn main() -> Result<()> {
         download_card_json(&client, &unique_artwork.download_uri).await?;
 
         // parse downloaded file for card IDs and download URIs
-        let cards = parse_card_json_file()?;
-        println!("number of parsed cards: {}", cards.len());
-        // println!("First card: {:#?}", cards[0]);
+        cards = parse_card_json_file()?;
 
         // save processed card data to a file
         save_processed_json_to_file(&cards)?;
     } else {
         println!("Processed card data already exists...");
+
+        // read file to get cards
+        cards = parse_processed_card_json_file()?;
     }
+
+    println!("number of parsed cards: {}", cards.len());
+    // println!("First card: {:#?}", cards[0]);
 
     println!("\nFinished!\n");
     Ok(())
@@ -151,4 +157,21 @@ fn save_processed_json_to_file(data: &Vec<Card>) -> Result<()> {
     output.write_all(json.as_bytes())?;
 
     Ok(())
+}
+
+fn parse_processed_card_json_file() -> Result<Vec<Card>> {
+    if !fs::exists(PROCESSED_CARD_DATA_FILE)? {
+        return Err("Processed card json file does not exist".into());
+    }
+
+    println!("Reading processed card json from file...");
+
+    // Open the file in read-only mode with buffer.
+    let file = File::open(PROCESSED_CARD_DATA_FILE).expect("File should be opened as read only");
+    let reader = BufReader::new(file);
+
+    // Read the JSON contents of the file as an instance of `User`.
+    let cards: Vec<Card> = serde_json::from_reader(reader)?;
+
+    return Ok(cards);
 }
