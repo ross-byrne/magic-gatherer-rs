@@ -13,7 +13,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use tokio::io::AsyncWriteExt;
-use types::{BulkData, BulkDataItem, BulkItemType, Card};
+use types::{BulkData, BulkDataItem, BulkItemType, Card, CardImageUri};
 
 const SCRYFALL_API_URL: &'static str = "https://api.scryfall.com/bulk-data";
 const DATA_DIR: &'static str = "data";
@@ -57,6 +57,9 @@ async fn main() -> Result<()> {
 
     println!("number of parsed cards: {}", cards.len());
     // println!("First card: {:#?}", cards[0]);
+
+    // start downloading images
+    download_card_iamges(cards).await?;
 
     println!("\nFinished!\n");
     Ok(())
@@ -131,7 +134,7 @@ fn parse_card_json_file() -> Result<Vec<Card>> {
     let file = File::open(BULK_DATA_FILE).expect("File should be opened as read only");
     let reader = BufReader::new(file);
 
-    // Read the JSON contents of the file as an instance of `User`.
+    // Read he JSON contents of the file as an instance of `User`.
     let cards: Vec<Card> = serde_json::from_reader(reader)?;
 
     // Filter out entries missing image uris
@@ -174,4 +177,67 @@ fn parse_processed_card_json_file() -> Result<Vec<Card>> {
     let cards: Vec<Card> = serde_json::from_reader(reader)?;
 
     return Ok(cards);
+}
+
+async fn download_card_image(client: &reqwest::Client, card: &Card) -> Result<()> {
+    // check if file exists and skip download if yes
+    // TODO: check expected file size. Remove file and download again if it doesn't match
+    let file_path: String = format!("{}/{}.png", CARD_DIR, card.id);
+    if fs::exists(file_path.to_owned())? {
+        println!(
+            "Card already downloaded. Name: {}, ID: {}...",
+            card.name, card.id
+        );
+        return Ok(());
+    }
+
+    println!(
+        "Downloading image for card Name: {}, ID: {}...",
+        card.name, card.id
+    );
+
+    // get download uri from card
+    let image_uris: &CardImageUri = card
+        .image_uris
+        .as_ref()
+        .expect("Card should have image uris");
+    let download_uri: String = image_uris.normal.to_owned();
+
+    // stream response
+    let mut stream = client
+        .get(download_uri)
+        .headers(get_request_headers())
+        .send()
+        .await?
+        .bytes_stream();
+
+    // write chunks to file as it downloads
+    let mut file = tokio::fs::File::create(file_path).await?;
+    while let Some(chunk) = stream.next().await {
+        file.write_all(&chunk?).await?;
+    }
+
+    return Ok(());
+}
+
+async fn download_card_iamges(cards: Vec<Card>) -> Result<()> {
+    use std::time::Duration;
+
+    println!("\nStarting image download...\n");
+    let client = reqwest::Client::new();
+    // let list = vec![1, 2, 3, 4, 5, 6];
+    // let mut iter = list.iter();
+
+    let mut iter = cards.iter();
+    let card = iter.next().unwrap();
+
+    // while let Some(card) = iter.next() {
+    // download card image if not already downloaded
+    download_card_image(&client, &card).await?;
+
+    // rate limit requests to follow api rules. See: https://scryfall.com/docs/api
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    // }
+
+    return Ok(());
 }
