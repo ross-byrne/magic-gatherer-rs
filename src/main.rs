@@ -59,7 +59,7 @@ async fn main() -> Result<()> {
     // println!("First card: {:#?}", cards[0]);
 
     // start downloading images
-    download_card_iamges(cards).await?;
+    download_card_images(cards).await?;
 
     println!("\nFinished!\n");
     Ok(())
@@ -134,7 +134,7 @@ fn parse_card_json_file() -> Result<Vec<Card>> {
     let file = File::open(BULK_DATA_FILE).expect("File should be opened as read only");
     let reader = BufReader::new(file);
 
-    // Read he JSON contents of the file as an instance of `User`.
+    // Read the JSON contents of the file as an instance of `User`.
     let cards: Vec<Card> = serde_json::from_reader(reader)?;
 
     // Filter out entries missing image uris
@@ -217,27 +217,22 @@ async fn download_card_image(client: &reqwest::Client, card: &Card) -> Result<()
         file.write_all(&chunk?).await?;
     }
 
+    // rate limit requests to follow api rules. See: https://scryfall.com/docs/api
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
     return Ok(());
 }
 
-async fn download_card_iamges(cards: Vec<Card>) -> Result<()> {
-    use std::time::Duration;
-
+async fn download_card_images(cards: Vec<Card>) -> Result<()> {
     println!("\nStarting image download...\n");
+
     let client = reqwest::Client::new();
-    // let list = vec![1, 2, 3, 4, 5, 6];
-    // let mut iter = list.iter();
-
     let mut iter = cards.iter();
-    let card = iter.next().unwrap();
 
-    // while let Some(card) = iter.next() {
-    // download card image if not already downloaded
-    download_card_image(&client, &card).await?;
-
-    // rate limit requests to follow api rules. See: https://scryfall.com/docs/api
-    tokio::time::sleep(Duration::from_millis(100)).await;
-    // }
+    // download each card image if not already downloaded
+    while let Some(card) = iter.next() {
+        download_card_image(&client, &card).await?;
+    }
 
     return Ok(());
 }
