@@ -179,21 +179,26 @@ fn parse_processed_card_json_file() -> Result<Vec<Card>> {
     return Ok(cards);
 }
 
-async fn download_card_image(client: &reqwest::Client, card: &Card) -> Result<()> {
+async fn download_card_image(
+    client: &reqwest::Client,
+    card: &Card,
+    count: usize,
+    total: usize,
+) -> Result<()> {
     // check if file exists and skip download if yes
     // TODO: check expected file size. Remove file and download again if it doesn't match
     let file_path: String = format!("{}/{}.png", CARD_DIR, card.id);
     if fs::exists(file_path.to_owned())? {
         println!(
-            "Card already downloaded. Name: {}, ID: {}...",
-            card.name, card.id
+            "{}/{}: Card already downloaded. Name: \"{}\", ID: {}...",
+            count, total, card.name, card.id
         );
         return Ok(());
     }
 
     println!(
-        "Downloading image for card Name: {}, ID: {}...",
-        card.name, card.id
+        "{}/{}: Downloading Card Name: \"{}\", ID: {}...",
+        count, total, card.name, card.id
     );
 
     // get download uri from card
@@ -228,10 +233,13 @@ async fn download_card_images(cards: Vec<Card>) -> Result<()> {
 
     let client = reqwest::Client::new();
     let mut iter = cards.iter();
+    let mut count: usize = 0;
+    let total = cards.len();
 
     // download each card image if not already downloaded
     while let Some(card) = iter.next() {
-        download_card_image(&client, &card).await?;
+        count += 1;
+        download_card_image(&client, &card, count, total).await?;
     }
 
     return Ok(());
