@@ -48,7 +48,6 @@ mod test {
 
         // Create a mock server
         let mut server = mockito::Server::new_async().await;
-        let test_url = format!("{}/test", server.url());
         let mock = server
             .mock("GET", "/test")
             .with_status(201)
@@ -58,6 +57,7 @@ mod test {
             .await;
 
         // create a test request and fire it
+        let test_url = format!("{}/test", server.url());
         let response = api.get(test_url).send().await;
 
         // Verify GET request was made with correct headers
