@@ -1,16 +1,11 @@
+use crate::card_api::CardApi;
 use crate::Result;
-use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 
 /// Using Scryfall API to get magic cards. See documentation here: https://scryfall.com/docs/api
 
 const UNIQUE_ARTWORK_KEY: &'static str = "unique_artwork";
 const DEFAULT_CARDS_KEY: &'static str = "default_cards";
-
-pub trait CardApi {
-    fn base_url(&self) -> String;
-    fn get(&self, url: String) -> RequestBuilder;
-}
 
 /// Bulk Data api: https://scryfall.com/docs/api/bulk-data
 #[derive(Debug, Deserialize, Serialize)]

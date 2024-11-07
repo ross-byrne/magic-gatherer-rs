@@ -6,7 +6,7 @@ mod types;
 use futures_util::StreamExt;
 use reqwest;
 // use serde_json::to_string_pretty;
-use card_api::ScryfallApi;
+use card_api::{CardApi, ScryfallApi};
 use serde_json;
 use std::error::Error;
 use std::fs;
@@ -14,7 +14,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use tokio::io::AsyncWriteExt;
-use types::{BulkData, BulkDataItem, BulkItemType, Card, CardApi, CardImageUri};
+use types::{BulkData, BulkDataItem, BulkItemType, Card, CardImageUri};
 
 const DATA_DIR: &'static str = "data";
 const CARD_DIR: &'static str = "data/magic-the-gathering-cards";

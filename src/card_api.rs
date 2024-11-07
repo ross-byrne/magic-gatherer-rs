@@ -1,10 +1,14 @@
-use crate::types::CardApi;
 use reqwest::{
     header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT},
     RequestBuilder,
 };
 
 const SCRYFALL_API_URL: &'static str = "https://api.scryfall.com/bulk-data";
+
+pub trait CardApi {
+    fn base_url(&self) -> String;
+    fn get(&self, url: String) -> RequestBuilder;
+}
 
 pub struct ScryfallApi {
     client: reqwest::Client,
