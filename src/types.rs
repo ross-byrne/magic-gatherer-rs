@@ -1,3 +1,5 @@
+use crate::Result;
+use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 
 /// Using Scryfall API to get magic cards. See documentation here: https://scryfall.com/docs/api
@@ -7,6 +9,7 @@ const DEFAULT_CARDS_KEY: &'static str = "default_cards";
 
 pub trait CardApi {
     fn base_url(&self) -> String;
+    fn get_request(&self, client: &reqwest::Client, url: String) -> RequestBuilder;
 }
 
 /// Bulk Data api: https://scryfall.com/docs/api/bulk-data
@@ -15,6 +18,21 @@ pub struct BulkData {
     pub object: String,
     pub has_more: bool,
     pub data: Vec<BulkDataItem>,
+}
+
+impl BulkData {
+    pub async fn fetch_bulk_data(card_api: impl CardApi, client: &reqwest::Client) -> Result<Self> {
+        println!("Fetching bulk data from Scryfall API...");
+
+        let bulk_data: BulkData = card_api
+            .get_request(client, card_api.base_url())
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        return Ok(bulk_data);
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

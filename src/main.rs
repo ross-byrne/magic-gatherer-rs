@@ -5,7 +5,6 @@ mod types;
 
 use futures_util::StreamExt;
 use reqwest;
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT};
 // use serde_json::to_string_pretty;
 use card_api::ScryfallApi;
 use serde_json;
@@ -35,14 +34,14 @@ async fn main() -> Result<()> {
     // if processed card data doesn't exist yet
     if !fs::exists(PROCESSED_CARD_DATA_FILE)? {
         // fetch bulk data
-        let bulk_data = fetch_bulk_data(ScryfallApi, &client).await?;
+        let bulk_data = BulkData::fetch_bulk_data(ScryfallApi, &client).await?;
 
         // get unique artwork object
         let unique_artwork: &BulkDataItem = BulkItemType::UniqueArtwork.get_item(&bulk_data);
         // println!("{:#?}", unique_artwork);
 
         // start downloading card json file
-        download_card_json(&client, &unique_artwork.download_uri).await?;
+        download_card_json(ScryfallApi, &client, &unique_artwork.download_uri).await?;
 
         // parse downloaded file for card IDs and download URIs
         cards = parse_card_json_file()?;
@@ -60,7 +59,7 @@ async fn main() -> Result<()> {
     // println!("First card: {:#?}", cards[0]);
 
     // start downloading images
-    download_card_images(&client, cards).await?;
+    download_card_images(ScryfallApi, &client, cards).await?;
 
     println!("\nFinished!\n");
     Ok(())
@@ -73,35 +72,11 @@ fn create_data_dirs() {
     fs::create_dir_all(&CARD_DIR).expect("Card directory should be created");
 }
 
-async fn fetch_bulk_data(card_api: impl CardApi, client: &reqwest::Client) -> Result<BulkData> {
-    println!("Fetching bulk data from Scryfall API...");
-
-    let bulk_data: BulkData = client
-        .get(card_api.base_url())
-        .headers(get_request_headers())
-        .send()
-        .await?
-        .json()
-        .await?;
-
-    // pretty print response for testing
-    // let pretty = to_string_pretty(&bulk_data)?;
-    // println!("{:#?}", bulk_data);
-
-    return Ok(bulk_data);
-}
-
-fn get_request_headers() -> HeaderMap {
-    let mut headers = HeaderMap::new();
-
-    // Add headers as requested in API docs: https://scryfall.com/docs/api
-    headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
-    headers.insert(USER_AGENT, HeaderValue::from_static("MagicGatherer/0.1"));
-
-    return headers;
-}
-
-async fn download_card_json(client: &reqwest::Client, download_uri: &str) -> Result<()> {
+async fn download_card_json(
+    card_api: impl CardApi,
+    client: &reqwest::Client,
+    download_uri: &str,
+) -> Result<()> {
     // check if file exists and skip download if yes
     // TODO: check expected file size from BulkDataItem. Remove file and download again if it doesn't match
     if fs::exists(BULK_DATA_FILE)? {
@@ -112,9 +87,8 @@ async fn download_card_json(client: &reqwest::Client, download_uri: &str) -> Res
     println!("Downloading card json...");
 
     // stream response
-    let mut stream = client
-        .get(download_uri)
-        .headers(get_request_headers())
+    let mut stream = card_api
+        .get_request(client, download_uri.to_string())
         .send()
         .await?
         .bytes_stream();
@@ -181,6 +155,7 @@ fn parse_processed_card_json_file() -> Result<Vec<Card>> {
 }
 
 async fn download_card_image(
+    card_api: &impl CardApi,
     client: &reqwest::Client,
     card: &Card,
     count: usize,
@@ -210,9 +185,8 @@ async fn download_card_image(
     let download_uri: String = image_uris.normal.to_owned();
 
     // stream response
-    let mut stream = client
-        .get(download_uri)
-        .headers(get_request_headers())
+    let mut stream = card_api
+        .get_request(client, download_uri.to_string())
         .send()
         .await?
         .bytes_stream();
@@ -229,7 +203,11 @@ async fn download_card_image(
     return Ok(());
 }
 
-async fn download_card_images(client: &reqwest::Client, cards: Vec<Card>) -> Result<()> {
+async fn download_card_images(
+    card_api: impl CardApi,
+    client: &reqwest::Client,
+    cards: Vec<Card>,
+) -> Result<()> {
     println!("\nStarting image download...\n");
 
     let mut iter = cards.iter();
@@ -239,7 +217,7 @@ async fn download_card_images(client: &reqwest::Client, cards: Vec<Card>) -> Res
     // download each card image if not already downloaded
     while let Some(card) = iter.next() {
         count += 1;
-        download_card_image(&client, &card, count, total).await?;
+        download_card_image(&card_api, &client, &card, count, total).await?;
     }
 
     return Ok(());
