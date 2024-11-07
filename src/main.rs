@@ -24,7 +24,9 @@ const PROCESSED_CARD_DATA_FILE: &'static str = "data/processed-card-data.json";
 #[tokio::main]
 async fn main() -> Result<()> {
     println!("Welcome to magic-gatherer-rs!");
-    let client = reqwest::Client::new();
+
+    // create new instance of scryfall api
+    let scryfall_api = ScryfallApi::new(reqwest::Client::new());
 
     // setup data directory
     create_data_dirs();
@@ -34,14 +36,13 @@ async fn main() -> Result<()> {
     // if processed card data doesn't exist yet
     if !fs::exists(PROCESSED_CARD_DATA_FILE)? {
         // fetch bulk data
-        let bulk_data = BulkData::fetch_bulk_data(ScryfallApi, &client).await?;
+        let bulk_data = BulkData::fetch_bulk_data(&scryfall_api).await?;
 
         // get unique artwork object
         let unique_artwork: &BulkDataItem = BulkItemType::UniqueArtwork.get_item(&bulk_data);
-        // println!("{:#?}", unique_artwork);
 
         // start downloading card json file
-        download_card_json(ScryfallApi, &client, &unique_artwork.download_uri).await?;
+        download_card_json(&scryfall_api, &unique_artwork.download_uri).await?;
 
         // parse downloaded file for card IDs and download URIs
         cards = parse_card_json_file()?;
@@ -59,7 +60,7 @@ async fn main() -> Result<()> {
     // println!("First card: {:#?}", cards[0]);
 
     // start downloading images
-    download_card_images(ScryfallApi, &client, cards).await?;
+    download_card_images(&scryfall_api, cards).await?;
 
     println!("\nFinished!\n");
     Ok(())
@@ -72,11 +73,7 @@ fn create_data_dirs() {
     fs::create_dir_all(&CARD_DIR).expect("Card directory should be created");
 }
 
-async fn download_card_json(
-    card_api: impl CardApi,
-    client: &reqwest::Client,
-    download_uri: &str,
-) -> Result<()> {
+async fn download_card_json(card_api: &impl CardApi, download_uri: &str) -> Result<()> {
     // check if file exists and skip download if yes
     // TODO: check expected file size from BulkDataItem. Remove file and download again if it doesn't match
     if fs::exists(BULK_DATA_FILE)? {
@@ -88,7 +85,7 @@ async fn download_card_json(
 
     // stream response
     let mut stream = card_api
-        .get_request(client, download_uri.to_string())
+        .get_request(download_uri.to_string())
         .send()
         .await?
         .bytes_stream();
@@ -156,7 +153,6 @@ fn parse_processed_card_json_file() -> Result<Vec<Card>> {
 
 async fn download_card_image(
     card_api: &impl CardApi,
-    client: &reqwest::Client,
     card: &Card,
     count: usize,
     total: usize,
@@ -186,7 +182,7 @@ async fn download_card_image(
 
     // stream response
     let mut stream = card_api
-        .get_request(client, download_uri.to_string())
+        .get_request(download_uri.to_string())
         .send()
         .await?
         .bytes_stream();
@@ -203,11 +199,7 @@ async fn download_card_image(
     return Ok(());
 }
 
-async fn download_card_images(
-    card_api: impl CardApi,
-    client: &reqwest::Client,
-    cards: Vec<Card>,
-) -> Result<()> {
+async fn download_card_images(card_api: &impl CardApi, cards: Vec<Card>) -> Result<()> {
     println!("\nStarting image download...\n");
 
     let mut iter = cards.iter();
@@ -217,7 +209,7 @@ async fn download_card_images(
     // download each card image if not already downloaded
     while let Some(card) = iter.next() {
         count += 1;
-        download_card_image(&card_api, &client, &card, count, total).await?;
+        download_card_image(card_api, &card, count, total).await?;
     }
 
     return Ok(());

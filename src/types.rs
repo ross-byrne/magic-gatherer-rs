@@ -9,7 +9,7 @@ const DEFAULT_CARDS_KEY: &'static str = "default_cards";
 
 pub trait CardApi {
     fn base_url(&self) -> String;
-    fn get_request(&self, client: &reqwest::Client, url: String) -> RequestBuilder;
+    fn get_request(&self, url: String) -> RequestBuilder;
 }
 
 /// Bulk Data api: https://scryfall.com/docs/api/bulk-data
@@ -21,11 +21,11 @@ pub struct BulkData {
 }
 
 impl BulkData {
-    pub async fn fetch_bulk_data(card_api: impl CardApi, client: &reqwest::Client) -> Result<Self> {
+    pub async fn fetch_bulk_data(card_api: &impl CardApi) -> Result<Self> {
         println!("Fetching bulk data from Scryfall API...");
 
         let bulk_data: BulkData = card_api
-            .get_request(client, card_api.base_url())
+            .get_request(card_api.base_url())
             .send()
             .await?
             .json()
