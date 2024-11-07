@@ -9,7 +9,7 @@ const DEFAULT_CARDS_KEY: &'static str = "default_cards";
 
 pub trait CardApi {
     fn base_url(&self) -> String;
-    fn get_request(&self, url: String) -> RequestBuilder;
+    fn get(&self, url: String) -> RequestBuilder;
 }
 
 /// Bulk Data api: https://scryfall.com/docs/api/bulk-data
@@ -25,7 +25,7 @@ impl BulkData {
         println!("Fetching bulk data from Scryfall API...");
 
         let bulk_data: BulkData = card_api
-            .get_request(card_api.base_url())
+            .get(card_api.base_url())
             .send()
             .await?
             .json()
@@ -66,7 +66,7 @@ pub struct Card {
     pub name: String,
     pub image_uris: Option<CardImageUri>,
     //
-    // Other field we aren't using
+    // Other fields we aren't using
     //
     // pub object: String,
     // pub oracle_id: String,

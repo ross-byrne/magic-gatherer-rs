@@ -15,13 +15,12 @@ impl ScryfallApi {
         return Self { client };
     }
 }
-
 impl CardApi for ScryfallApi {
     fn base_url(&self) -> String {
         return SCRYFALL_API_URL.to_string();
     }
 
-    fn get_request(&self, url: String) -> RequestBuilder {
+    fn get(&self, url: String) -> RequestBuilder {
         let mut headers = HeaderMap::new();
 
         // Add headers as requested in API docs: https://scryfall.com/docs/api
@@ -38,8 +37,31 @@ mod test {
 
     #[test]
     fn scryfall_api_returns_correct_url() {
-        let client = reqwest::Client::new();
-        let result = ScryfallApi::new(client).base_url();
+        let api = ScryfallApi::new(reqwest::Client::new());
+        let result = api.base_url();
         assert_eq!(result, SCRYFALL_API_URL.to_string());
+    }
+
+    #[tokio::test]
+    async fn get_requests_have_correct_headers() {
+        let api = ScryfallApi::new(reqwest::Client::new());
+
+        // Create a mock server
+        let mut server = mockito::Server::new_async().await;
+        let test_url = format!("{}/test", server.url());
+        let mock = server
+            .mock("GET", "/test")
+            .with_status(201)
+            .match_header(ACCEPT, "application/json")
+            .match_header(USER_AGENT, "MagicGatherer/0.1")
+            .create_async()
+            .await;
+
+        // create a test request and fire it
+        let response = api.get(test_url).send().await;
+
+        // Verify GET request was made with correct headers
+        mock.assert_async().await;
+        assert!(response.is_ok());
     }
 }

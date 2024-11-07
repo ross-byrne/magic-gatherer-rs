@@ -85,7 +85,7 @@ async fn download_card_json(card_api: &impl CardApi, download_uri: &str) -> Resu
 
     // stream response
     let mut stream = card_api
-        .get_request(download_uri.to_string())
+        .get(download_uri.to_string())
         .send()
         .await?
         .bytes_stream();
@@ -182,7 +182,7 @@ async fn download_card_image(
 
     // stream response
     let mut stream = card_api
-        .get_request(download_uri.to_string())
+        .get(download_uri.to_string())
         .send()
         .await?
         .bytes_stream();
