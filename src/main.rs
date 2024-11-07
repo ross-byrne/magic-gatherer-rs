@@ -1,11 +1,13 @@
 pub type Result<T> = core::result::Result<T, Box<dyn Error>>;
 
+mod card_api;
 mod types;
 
 use futures_util::StreamExt;
 use reqwest;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT};
 // use serde_json::to_string_pretty;
+use card_api::ScryfallApi;
 use serde_json;
 use std::error::Error;
 use std::fs;
@@ -13,9 +15,8 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use tokio::io::AsyncWriteExt;
-use types::{BulkData, BulkDataItem, BulkItemType, Card, CardImageUri};
+use types::{BulkData, BulkDataItem, BulkItemType, Card, CardApi, CardImageUri};
 
-const SCRYFALL_API_URL: &'static str = "https://api.scryfall.com/bulk-data";
 const DATA_DIR: &'static str = "data";
 const CARD_DIR: &'static str = "data/magic-the-gathering-cards";
 const BULK_DATA_FILE: &'static str = "data/bulk-data.json";
@@ -34,7 +35,7 @@ async fn main() -> Result<()> {
     // if processed card data doesn't exist yet
     if !fs::exists(PROCESSED_CARD_DATA_FILE)? {
         // fetch bulk data
-        let bulk_data = fetch_bulk_data(&client).await?;
+        let bulk_data = fetch_bulk_data(ScryfallApi, &client).await?;
 
         // get unique artwork object
         let unique_artwork: &BulkDataItem = BulkItemType::UniqueArtwork.get_item(&bulk_data);
@@ -72,11 +73,11 @@ fn create_data_dirs() {
     fs::create_dir_all(&CARD_DIR).expect("Card directory should be created");
 }
 
-async fn fetch_bulk_data(client: &reqwest::Client) -> Result<BulkData> {
+async fn fetch_bulk_data(card_api: impl CardApi, client: &reqwest::Client) -> Result<BulkData> {
     println!("Fetching bulk data from Scryfall API...");
 
     let bulk_data: BulkData = client
-        .get(SCRYFALL_API_URL)
+        .get(card_api.base_url())
         .headers(get_request_headers())
         .send()
         .await?

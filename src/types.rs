@@ -5,6 +5,10 @@ use serde::{Deserialize, Serialize};
 const UNIQUE_ARTWORK_KEY: &'static str = "unique_artwork";
 const DEFAULT_CARDS_KEY: &'static str = "default_cards";
 
+pub trait CardApi {
+    fn base_url(&self) -> String;
+}
+
 /// Bulk Data api: https://scryfall.com/docs/api/bulk-data
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BulkData {
