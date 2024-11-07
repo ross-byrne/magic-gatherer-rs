@@ -19,12 +19,7 @@ impl BulkData {
     pub async fn fetch_bulk_data(card_api: &impl CardApi) -> Result<Self> {
         println!("Fetching bulk data from Scryfall API...");
 
-        let bulk_data: BulkData = card_api
-            .get(card_api.base_url())
-            .send()
-            .await?
-            .json()
-            .await?;
+        let bulk_data: BulkData = card_api.get(card_api.base_url()).await?.json().await?;
 
         return Ok(bulk_data);
     }

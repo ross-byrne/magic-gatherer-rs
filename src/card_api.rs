@@ -1,13 +1,14 @@
+use crate::Result;
 use reqwest::{
     header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT},
-    RequestBuilder,
+    Response,
 };
 
 const SCRYFALL_API_URL: &'static str = "https://api.scryfall.com/bulk-data";
 
 pub trait CardApi {
     fn base_url(&self) -> String;
-    fn get(&self, url: String) -> RequestBuilder;
+    async fn get(&self, url: String) -> Result<Response>;
 }
 
 pub struct ScryfallApi {
@@ -24,14 +25,18 @@ impl CardApi for ScryfallApi {
         return SCRYFALL_API_URL.to_string();
     }
 
-    fn get(&self, url: String) -> RequestBuilder {
+    async fn get(&self, url: String) -> Result<Response> {
         let mut headers = HeaderMap::new();
 
         // Add headers as requested in API docs: https://scryfall.com/docs/api
         headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
         headers.insert(USER_AGENT, HeaderValue::from_static("MagicGatherer/0.1"));
 
-        return self.client.get(url).headers(headers);
+        let result = self.client.get(url).headers(headers).send().await;
+        return match result {
+            Ok(r) => Ok(r),
+            Err(e) => Err(e.into()),
+        };
     }
 }
 
@@ -62,7 +67,7 @@ mod test {
 
         // create a test request and fire it
         let test_url = format!("{}/test", server.url());
-        let response = api.get(test_url).send().await;
+        let response = api.get(test_url).await;
 
         // Verify GET request was made with correct headers
         mock.assert_async().await;

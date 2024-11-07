@@ -84,11 +84,7 @@ async fn download_card_json(card_api: &impl CardApi, download_uri: &str) -> Resu
     println!("Downloading card json...");
 
     // stream response
-    let mut stream = card_api
-        .get(download_uri.to_string())
-        .send()
-        .await?
-        .bytes_stream();
+    let mut stream = card_api.get(download_uri.to_string()).await?.bytes_stream();
 
     // write chunks to file as it downloads
     let mut file = tokio::fs::File::create(BULK_DATA_FILE).await?;
@@ -181,11 +177,7 @@ async fn download_card_image(
     let download_uri: String = image_uris.normal.to_owned();
 
     // stream response
-    let mut stream = card_api
-        .get(download_uri.to_string())
-        .send()
-        .await?
-        .bytes_stream();
+    let mut stream = card_api.get(download_uri.to_string()).await?.bytes_stream();
 
     // write chunks to file as it downloads
     let mut file = tokio::fs::File::create(file_path).await?;
