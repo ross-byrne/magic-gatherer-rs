@@ -40,7 +40,7 @@ pub struct BulkDataItem {
 }
 
 /// card api: https://scryfall.com/docs/api/cards/id
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct CardImageUri {
     // pub small: String,
     pub normal: String,
@@ -50,8 +50,8 @@ pub struct CardImageUri {
     // pub border_crop: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Card {
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct CardUnprocessed {
     pub id: String,
     pub name: String,
     pub image_uris: Option<CardImageUri>,
@@ -67,6 +67,26 @@ pub struct Card {
     // pub layout: String,
     // pub highres_image: bool,
     // pub image_status: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Card {
+    pub id: String,
+    pub name: String,
+    pub image_uri: String,
+}
+
+impl From<CardUnprocessed> for Card {
+    fn from(unprocessed: CardUnprocessed) -> Self {
+        Card {
+            id: unprocessed.id,
+            name: unprocessed.name,
+            image_uri: unprocessed
+                .image_uris
+                .expect("UnprocessedCard should have image_uris")
+                .normal,
+        }
+    }
 }
 
 pub enum BulkItemType {
