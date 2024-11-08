@@ -1,6 +1,9 @@
 use crate::card_api::CardApi;
-use crate::Result;
+use crate::{Result, BULK_DATA_FILE};
+use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use std::fs;
+use tokio::io::AsyncWriteExt;
 
 /// Using Scryfall API to get magic cards. See documentation here: https://scryfall.com/docs/api
 
@@ -18,7 +21,6 @@ pub struct BulkData {
 impl BulkData {
     pub async fn fetch_bulk_data(card_api: &impl CardApi) -> Result<Self> {
         println!("Fetching bulk data from Scryfall API...");
-
         let bulk_data: BulkData = card_api.get(card_api.base_url()).await?.json().await?;
 
         return Ok(bulk_data);
@@ -27,65 +29,36 @@ impl BulkData {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BulkDataItem {
-    pub object: String,
-    pub id: String,
     #[serde(rename = "type")]
     pub item_type: String,
-    pub updated_at: String,
-    pub uri: String,
+    pub name: String,
     pub download_uri: String,
-    pub size: u32,
-    pub name: String,
-    pub description: String,
 }
 
-/// card api: https://scryfall.com/docs/api/cards/id
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct CardImageUri {
-    // pub small: String,
-    pub normal: String,
-    // pub large: String,
-    // pub png: String,
-    // pub art_crop: String,
-    // pub border_crop: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct CardUnprocessed {
-    pub id: String,
-    pub name: String,
-    pub image_uris: Option<CardImageUri>,
-    //
-    // Other fields we aren't using
-    //
-    // pub object: String,
-    // pub oracle_id: String,
-    // pub lang: String,
-    // pub released_at: String,
-    // pub uri: String,
-    // pub scryfall_uri: String,
-    // pub layout: String,
-    // pub highres_image: bool,
-    // pub image_status: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Card {
-    pub id: String,
-    pub name: String,
-    pub image_uri: String,
-}
-
-impl From<CardUnprocessed> for Card {
-    fn from(unprocessed: CardUnprocessed) -> Self {
-        Card {
-            id: unprocessed.id,
-            name: unprocessed.name,
-            image_uri: unprocessed
-                .image_uris
-                .expect("UnprocessedCard should have image_uris")
-                .normal,
+impl BulkDataItem {
+    // Downloads BulkDataItem to json file
+    pub async fn download_cards_to_file(&self, card_api: &impl CardApi) -> Result<()> {
+        // check if file exists and skip download if yes
+        if fs::exists(BULK_DATA_FILE)? {
+            println!("File for {} already downloaded.", self.name);
+            return Ok(());
         }
+
+        println!("Downloading card json for {}...", self.name);
+
+        // Download file and stream response
+        let mut stream = card_api
+            .get(self.download_uri.to_string())
+            .await?
+            .bytes_stream();
+
+        // write chunks to file as it downloads
+        let mut file = tokio::fs::File::create(BULK_DATA_FILE).await?;
+        while let Some(chunk) = stream.next().await {
+            file.write_all(&chunk?).await?;
+        }
+
+        return Ok(());
     }
 }
 
@@ -108,5 +81,38 @@ impl BulkItemType {
             .iter()
             .find(|x| x.item_type == self.get_key())
             .expect("Should find bulk item by type");
+    }
+}
+
+/// card api: https://scryfall.com/docs/api/cards/id
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct CardImageUri {
+    pub normal: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct CardUnprocessed {
+    pub id: String,
+    pub name: String,
+    pub image_uris: Option<CardImageUri>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Card {
+    pub id: String,
+    pub name: String,
+    pub image_uri: String,
+}
+
+impl From<CardUnprocessed> for Card {
+    fn from(unprocessed: CardUnprocessed) -> Self {
+        Card {
+            id: unprocessed.id,
+            name: unprocessed.name,
+            image_uri: unprocessed
+                .image_uris
+                .expect("UnprocessedCard should have image_uris")
+                .normal,
+        }
     }
 }

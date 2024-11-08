@@ -3,15 +3,12 @@ pub type Result<T> = core::result::Result<T, Box<dyn Error>>;
 mod card_api;
 mod types;
 
-use futures_util::StreamExt;
-// use serde_json::to_string_pretty;
 use card_api::{CardApi, ScryfallApi};
+use futures_util::StreamExt;
 use serde_json;
 use std::error::Error;
 use std::fs;
-use std::fs::File;
 use std::io::prelude::*;
-use std::io::BufReader;
 use tokio::io::AsyncWriteExt;
 use types::{BulkData, BulkDataItem, BulkItemType, Card, CardUnprocessed};
 
@@ -36,16 +33,12 @@ async fn main() -> Result<()> {
         // fetch bulk data
         let bulk_data = BulkData::fetch_bulk_data(&scryfall_api).await?;
 
-        // get unique artwork object
+        // get unique artwork object and download cards json
         let unique_artwork: &BulkDataItem = BulkItemType::UniqueArtwork.get_item(&bulk_data);
-
-        // start downloading bulk card json file
-        download_bulk_data_cards(&scryfall_api, &unique_artwork.download_uri).await?;
+        unique_artwork.download_cards_to_file(&scryfall_api).await?;
 
         // parse downloaded file for card IDs and download URIs
         cards = parse_card_json_file()?;
-
-        // save processed card data to a file
         save_processed_json_to_file(&cards)?;
     } else {
         println!("Processed card data already exists...");
@@ -54,7 +47,7 @@ async fn main() -> Result<()> {
         cards = parse_processed_card_json_file()?;
     }
 
-    println!("number of parsed cards: {}", cards.len());
+    println!("Number of parsed cards: {}", cards.len());
 
     // start downloading images
     download_card_images(&scryfall_api, cards).await?;
@@ -70,36 +63,13 @@ fn create_data_dirs() {
     fs::create_dir_all(&CARD_DIR).expect("Card directory should be created");
 }
 
-// download bulk cards file
-async fn download_bulk_data_cards(card_api: &impl CardApi, download_uri: &str) -> Result<()> {
-    // check if file exists and skip download if yes
-    // TODO: check expected file size from BulkDataItem. Remove file and download again if it doesn't match
-    if fs::exists(BULK_DATA_FILE)? {
-        println!("File already downloaded.");
-        return Ok(());
-    }
-
-    println!("Downloading card json...");
-
-    // stream response
-    let mut stream = card_api.get(download_uri.to_string()).await?.bytes_stream();
-
-    // write chunks to file as it downloads
-    let mut file = tokio::fs::File::create(BULK_DATA_FILE).await?;
-    while let Some(chunk) = stream.next().await {
-        file.write_all(&chunk?).await?;
-    }
-
-    return Ok(());
-}
-
 // Parses the bulk card json file
 fn parse_card_json_file() -> Result<Vec<Card>> {
     println!("Parsing downloaded json file...");
 
     // Open the file in read-only mode with buffer.
-    let file = File::open(BULK_DATA_FILE).expect("File should be opened as read only");
-    let reader = BufReader::new(file);
+    let file = fs::File::open(BULK_DATA_FILE).expect("File should be opened as read only");
+    let reader = std::io::BufReader::new(file);
 
     // Read the JSON contents of the file as an instance of `User`.
     let cards_unprocessed: Vec<CardUnprocessed> = serde_json::from_reader(reader)?;
@@ -127,7 +97,7 @@ fn save_processed_json_to_file(data: &Vec<Card>) -> Result<()> {
     }
 
     // create file to save processed card data
-    let mut output = File::create(PROCESSED_CARD_DATA_FILE)?;
+    let mut output = fs::File::create(PROCESSED_CARD_DATA_FILE)?;
 
     // serialse structs as json and write it to the file
     let json = serde_json::to_string(&data).expect("Struct should be serialised");
@@ -145,8 +115,9 @@ fn parse_processed_card_json_file() -> Result<Vec<Card>> {
     println!("Reading processed card json from file...");
 
     // Open the file in read-only mode with buffer.
-    let file = File::open(PROCESSED_CARD_DATA_FILE).expect("File should be opened as read only");
-    let reader = BufReader::new(file);
+    let file =
+        fs::File::open(PROCESSED_CARD_DATA_FILE).expect("File should be opened as read only");
+    let reader = std::io::BufReader::new(file);
 
     // Read the JSON contents of the file as an instance of `User`.
     let cards: Vec<Card> = serde_json::from_reader(reader)?;
