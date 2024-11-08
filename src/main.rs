@@ -4,7 +4,6 @@ mod card_api;
 mod types;
 
 use futures_util::StreamExt;
-use reqwest;
 // use serde_json::to_string_pretty;
 use card_api::{CardApi, ScryfallApi};
 use serde_json;
@@ -26,7 +25,7 @@ async fn main() -> Result<()> {
     println!("Welcome to magic-gatherer-rs!");
 
     // create new instance of scryfall api
-    let scryfall_api = ScryfallApi::new(reqwest::Client::new());
+    let scryfall_api = ScryfallApi::new();
 
     // setup data directory
     create_data_dirs();

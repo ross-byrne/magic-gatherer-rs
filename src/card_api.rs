@@ -16,8 +16,10 @@ pub struct ScryfallApi {
 }
 
 impl ScryfallApi {
-    pub fn new(client: reqwest::Client) -> Self {
-        return Self { client };
+    pub fn new() -> Self {
+        return Self {
+            client: reqwest::Client::new(),
+        };
     }
 }
 impl CardApi for ScryfallApi {
@@ -46,14 +48,14 @@ mod test {
 
     #[test]
     fn scryfall_api_returns_correct_url() {
-        let api = ScryfallApi::new(reqwest::Client::new());
+        let api = ScryfallApi::new();
         let result = api.base_url();
         assert_eq!(result, SCRYFALL_API_URL.to_string());
     }
 
     #[tokio::test]
     async fn get_requests_have_correct_headers() {
-        let api = ScryfallApi::new(reqwest::Client::new());
+        let api = ScryfallApi::new();
 
         // Create a mock server
         let mut server = mockito::Server::new_async().await;
