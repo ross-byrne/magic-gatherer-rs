@@ -1,16 +1,18 @@
 pub type Result<T> = core::result::Result<T, Box<dyn Error>>;
 
+mod bulk_data;
 mod card_api;
-mod types;
+mod cards;
 
+use bulk_data::{BulkData, BulkDataItem, BulkItemType};
 use card_api::{CardApi, ScryfallApi};
+use cards::{Card, CardUnprocessed};
 use futures_util::StreamExt;
 use serde_json;
 use std::error::Error;
 use std::fs;
 use std::io::prelude::*;
 use tokio::io::AsyncWriteExt;
-use types::{BulkData, BulkDataItem, BulkItemType, Card, CardUnprocessed};
 
 const DATA_DIR: &'static str = "data";
 const CARD_DIR: &'static str = "data/magic-the-gathering-cards";
