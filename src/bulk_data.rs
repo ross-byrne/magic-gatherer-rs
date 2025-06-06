@@ -6,7 +6,6 @@ use std::fs;
 use tokio::io::AsyncWriteExt;
 
 /// Using Scryfall API to get magic cards. See documentation here: https://scryfall.com/docs/api
-
 const UNIQUE_ARTWORK_KEY: &str = "unique_artwork";
 const DEFAULT_CARDS_KEY: &str = "default_cards";
 
