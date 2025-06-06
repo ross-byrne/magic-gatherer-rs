@@ -1,5 +1,5 @@
 use crate::card_api::CardApi;
-use crate::{Result, BULK_DATA_FILE};
+use crate::{BULK_DATA_FILE, Result};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::fs;

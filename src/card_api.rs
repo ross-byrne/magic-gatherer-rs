@@ -1,7 +1,7 @@
 use crate::Result;
 use reqwest::{
-    header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT},
     Response,
+    header::{ACCEPT, HeaderMap, HeaderValue, USER_AGENT},
 };
 
 const SCRYFALL_API_URL: &str = "https://api.scryfall.com/bulk-data";

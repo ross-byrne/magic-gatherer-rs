@@ -82,10 +82,7 @@ fn parse_card_json_file() -> Result<Vec<Card>> {
         .collect();
 
     // Process card json to make it less nested
-    let cards: Vec<Card> = cards_unprocessed
-        .into_iter()
-        .map(Card::from)
-        .collect();
+    let cards: Vec<Card> = cards_unprocessed.into_iter().map(Card::from).collect();
 
     Ok(cards)
 }
