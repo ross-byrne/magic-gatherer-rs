@@ -7,8 +7,8 @@ use tokio::io::AsyncWriteExt;
 
 /// Using Scryfall API to get magic cards. See documentation here: https://scryfall.com/docs/api
 
-const UNIQUE_ARTWORK_KEY: &'static str = "unique_artwork";
-const DEFAULT_CARDS_KEY: &'static str = "default_cards";
+const UNIQUE_ARTWORK_KEY: &str = "unique_artwork";
+const DEFAULT_CARDS_KEY: &str = "default_cards";
 
 /// Bulk Data api: https://scryfall.com/docs/api/bulk-data
 #[derive(Debug, Deserialize, Serialize)]
@@ -23,7 +23,7 @@ impl BulkData {
         println!("Fetching bulk data from Scryfall API...");
         let bulk_data: BulkData = card_api.get(card_api.base_url()).await?.json().await?;
 
-        return Ok(bulk_data);
+        Ok(bulk_data)
     }
 }
 
@@ -58,7 +58,7 @@ impl BulkDataItem {
             file.write_all(&chunk?).await?;
         }
 
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -69,17 +69,17 @@ pub enum BulkItemType {
 
 impl BulkItemType {
     pub fn get_key(&self) -> &'static str {
-        return match self {
+        match self {
             Self::UniqueArtwork => UNIQUE_ARTWORK_KEY,
             Self::_DefaultCards => DEFAULT_CARDS_KEY,
-        };
+        }
     }
 
     pub fn get_item<'a>(&self, bulk_data: &'a BulkData) -> &'a BulkDataItem {
-        return bulk_data
+        bulk_data
             .data
             .iter()
             .find(|x| x.item_type == self.get_key())
-            .expect("Should find bulk item by type");
+            .expect("Should find bulk item by type")
     }
 }

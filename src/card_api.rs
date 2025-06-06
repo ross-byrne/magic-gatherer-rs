@@ -4,7 +4,7 @@ use reqwest::{
     Response,
 };
 
-const SCRYFALL_API_URL: &'static str = "https://api.scryfall.com/bulk-data";
+const SCRYFALL_API_URL: &str = "https://api.scryfall.com/bulk-data";
 
 pub trait CardApi {
     fn base_url(&self) -> String;
@@ -17,14 +17,14 @@ pub struct ScryfallApi {
 
 impl ScryfallApi {
     pub fn new() -> Self {
-        return Self {
+        Self {
             client: reqwest::Client::new(),
-        };
+        }
     }
 }
 impl CardApi for ScryfallApi {
     fn base_url(&self) -> String {
-        return SCRYFALL_API_URL.to_string();
+        SCRYFALL_API_URL.to_string()
     }
 
     async fn get(&self, url: String) -> Result<Response> {
@@ -35,10 +35,10 @@ impl CardApi for ScryfallApi {
         headers.insert(USER_AGENT, HeaderValue::from_static("MagicGatherer/0.1"));
 
         let result = self.client.get(url).headers(headers).send().await;
-        return match result {
+        match result {
             Ok(r) => Ok(r),
             Err(e) => Err(e.into()),
-        };
+        }
     }
 }
 

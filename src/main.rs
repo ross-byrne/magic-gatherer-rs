@@ -8,16 +8,15 @@ use bulk_data::{BulkData, BulkDataItem, BulkItemType};
 use card_api::{CardApi, ScryfallApi};
 use cards::{Card, CardUnprocessed};
 use futures_util::StreamExt;
-use serde_json;
 use std::error::Error;
 use std::fs;
 use std::io::prelude::*;
 use tokio::io::AsyncWriteExt;
 
-const DATA_DIR: &'static str = "data";
-const CARD_DIR: &'static str = "data/magic-the-gathering-cards";
-const BULK_DATA_FILE: &'static str = "data/bulk-data.json";
-const PROCESSED_CARD_DATA_FILE: &'static str = "data/processed-card-data.json";
+const DATA_DIR: &str = "data";
+const CARD_DIR: &str = "data/magic-the-gathering-cards";
+const BULK_DATA_FILE: &str = "data/bulk-data.json";
+const PROCESSED_CARD_DATA_FILE: &str = "data/processed-card-data.json";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -61,8 +60,8 @@ async fn main() -> Result<()> {
 // Recursively create required data directories
 fn create_data_dirs() {
     println!("Creating data directories...");
-    fs::create_dir_all(&DATA_DIR).expect("Data directory should be created");
-    fs::create_dir_all(&CARD_DIR).expect("Card directory should be created");
+    fs::create_dir_all(DATA_DIR).expect("Data directory should be created");
+    fs::create_dir_all(CARD_DIR).expect("Card directory should be created");
 }
 
 // Parses the bulk card json file
@@ -85,10 +84,10 @@ fn parse_card_json_file() -> Result<Vec<Card>> {
     // Process card json to make it less nested
     let cards: Vec<Card> = cards_unprocessed
         .into_iter()
-        .map(|unprocessed| Card::from(unprocessed))
+        .map(Card::from)
         .collect();
 
-    return Ok(cards);
+    Ok(cards)
 }
 
 // Saves processed card json to file
@@ -124,7 +123,7 @@ fn parse_processed_card_json_file() -> Result<Vec<Card>> {
     // Read the JSON contents of the file as an instance of `User`.
     let cards: Vec<Card> = serde_json::from_reader(reader)?;
 
-    return Ok(cards);
+    Ok(cards)
 }
 
 // Downloads a card image
@@ -137,7 +136,7 @@ async fn download_card_image(
     // check if file exists and skip download if yes
     // TODO: check expected file size. Remove file and download again if it doesn't match
     let file_path: String = format!("{}/{}.png", CARD_DIR, card.id);
-    if fs::exists(file_path.to_owned())? {
+    if fs::exists(&file_path)? {
         println!(
             "{}/{}: Card already downloaded. Name: \"{}\", ID: {}...",
             count, total, card.name, card.id
@@ -165,22 +164,22 @@ async fn download_card_image(
     // rate limit requests to follow api rules. See: https://scryfall.com/docs/api
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    return Ok(());
+    Ok(())
 }
 
 // Handles downloading all cards
 async fn download_card_images(card_api: &impl CardApi, cards: Vec<Card>) -> Result<()> {
     println!("\nStarting image download...\n");
 
-    let mut iter = cards.iter();
+    let iter = cards.iter();
     let mut count: usize = 0;
     let total = cards.len();
 
     // download each card image if not already downloaded
-    while let Some(card) = iter.next() {
+    for card in iter {
         count += 1;
-        download_card_image(card_api, &card, count, total).await?;
+        download_card_image(card_api, card, count, total).await?;
     }
 
-    return Ok(());
+    Ok(())
 }
